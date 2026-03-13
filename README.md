@@ -29,11 +29,11 @@ make install
 
 ### 预编译二进制文件
 
-从 [Releases](https://github.com/yourusername/wangzhanjiankong/releases) 下载对应平台的二进制文件。
+从 [Releases](https://gitee.com/sandaka/wzjk-cli/releases) 下载对应平台的二进制文件。
 
 ```bash
 # Linux/macOS
-curl -L https://github.com/yourusername/wangzhanjiankong/releases/latest/download/wzjk-cli-$(uname -s)-$(uname -m) -o wzjk-cli
+curl -L https://gitee.com/sandaka/wzjk-cli/releases/latest/download/wzjk-cli-$(uname -s)-$(uname -m) -o wzjk-cli
 chmod +x wzjk-cli
 sudo mv wzjk-cli /usr/local/bin/
 ```
