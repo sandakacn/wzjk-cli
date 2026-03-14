@@ -40,13 +40,6 @@ make install
 
 从 [GitHub Releases](https://github.com/sandakacn/wzjk-cli/releases) 下载对应平台的二进制文件。
 
-```bash
-# Linux/macOS
-curl -L https://gitee.com/sandaka/wzjk-cli/releases/latest/download/wzjk-cli-$(uname -s)-$(uname -m) -o wzjk-cli
-chmod +x wzjk-cli
-sudo mv wzjk-cli /usr/local/bin/
-```
-
 ## 快速开始
 
 ### 1. 生成 API Key
