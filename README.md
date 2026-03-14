@@ -13,12 +13,21 @@
 
 ## 安装
 
+### Homebrew（推荐）
+
+**macOS / Linux：**
+
+```bash
+brew tap sandakacn/wzjk-cli
+brew install wzjk-cli
+```
+
 ### 从源码构建
 
 ```bash
 # 克隆仓库
-git clone <repository-url>
-cd wangzhanjiankong/wzjk-cli
+git clone https://github.com/sandakacn/wzjk-cli.git
+cd wzjk-cli
 
 # 构建
 make build
@@ -29,7 +38,7 @@ make install
 
 ### 预编译二进制文件
 
-从 [Releases](https://gitee.com/sandaka/wzjk-cli/releases) 下载对应平台的二进制文件。
+从 [GitHub Releases](https://github.com/sandakacn/wzjk-cli/releases) 下载对应平台的二进制文件。
 
 ```bash
 # Linux/macOS
