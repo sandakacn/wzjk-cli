@@ -15,7 +15,7 @@ builds:
       - arm64
     ldflags:
       - -s -w -X wzjk-cli/internal/version.Version={{.Version}}
-    binary: wzjk
+    binary: wzjk-cli
 
 archives:
   - format: tar.gz
@@ -41,7 +41,7 @@ changelog:
       - '^ci:'
 
 brews:
-  - name: wzjk
+  - name: wzjk-cli
     repository:
       owner: sandakacn
       name: homebrew-wzjk-cli
@@ -51,6 +51,6 @@ brews:
     description: CLI tool for wzjk
     license: MIT
     install: |
-      bin.install "wzjk"
+      bin.install "wzjk-cli"
     test: |
-      system "#{bin}/wzjk", "--version"
+      system "#{bin}/wzjk-cli", "--version"
