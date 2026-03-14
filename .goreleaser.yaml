@@ -43,7 +43,7 @@ changelog:
 brews:
   - name: wzjk
     repository:
-      owner: moneyhere
+      owner: sandakacn
       name: homebrew-wzjk-cli
       branch: main
     directory: Formula
