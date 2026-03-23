@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 
 	"wzjk-cli/pkg/api"
 	"wzjk-cli/pkg/config"
@@ -131,6 +133,17 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("获取域名列表失败: %w", err)
 	}
 
+	// Sort by SSL expiry time (earliest first, nil values at the end)
+	sort.Slice(domains, func(i, j int) bool {
+		if domains[i].SSLValidTo == nil {
+			return false
+		}
+		if domains[j].SSLValidTo == nil {
+			return true
+		}
+		return domains[i].SSLValidTo.Before(*domains[j].SSLValidTo)
+	})
+
 	// Get availability data
 	availability, _ := client.GetAvailability()
 
@@ -143,7 +156,8 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 				filtered = append(filtered, d)
 				continue
 			}
-			if avail, ok := availability[d.Domain]; ok && !avail.Available {
+			availKey := getAvailabilityKey(d.Domain, d.Port)
+			if avail, ok := availability[availKey]; ok && !avail.Available {
 				filtered = append(filtered, d)
 			}
 		}
@@ -184,7 +198,8 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 
 		// Availability status
 		availStr := color.GreenString("未知")
-		if avail, ok := availability[d.Domain]; ok {
+		availKey := getAvailabilityKey(d.Domain, d.Port)
+		if avail, ok := availability[availKey]; ok {
 			if avail.Available {
 				availStr = color.GreenString("✓")
 			} else {
@@ -383,6 +398,56 @@ func displaySSLInfo(info *api.SSLInfo) {
 		fmt.Println(color.RedString("✗ 证书无效"))
 	}
 	fmt.Println()
+}
+
+// getAvailabilityKey generates the availability key used by the server
+// Format: "hostname:port" or "hostname:port/path" (e.g., "example.com:443" or "example.com:443/health")
+// This must match the server's parseDomain() function in src/lib/domain-utils.ts
+func getAvailabilityKey(domain string, port int) string {
+	hostname := domain
+	path := ""
+
+	// Handle URL format (e.g., "https://example.com:443/path")
+	if strings.HasPrefix(domain, "http://") || strings.HasPrefix(domain, "https://") {
+		// Extract hostname and path from URL
+		// Remove scheme
+		withoutScheme := strings.TrimPrefix(domain, "https://")
+		withoutScheme = strings.TrimPrefix(withoutScheme, "http://")
+
+		// Split by / to separate host and path
+		parts := strings.SplitN(withoutScheme, "/", 2)
+		hostname = parts[0]
+		if len(parts) > 1 {
+			path = "/" + parts[1]
+		}
+
+		// Extract port from hostname if present
+		if strings.Contains(hostname, ":") {
+			hostParts := strings.Split(hostname, ":")
+			hostname = hostParts[0]
+			if parsedPort, err := strconv.Atoi(hostParts[1]); err == nil && parsedPort > 0 && parsedPort <= 65535 {
+				port = parsedPort
+			}
+		}
+	} else {
+		// Simple hostname, possibly with port (e.g., "example.com:443")
+		if strings.Contains(hostname, ":") {
+			hostParts := strings.Split(hostname, ":")
+			hostname = hostParts[0]
+			if parsedPort, err := strconv.Atoi(hostParts[1]); err == nil && parsedPort > 0 && parsedPort <= 65535 {
+				port = parsedPort
+			}
+		}
+	}
+
+	// Normalize hostname to lowercase
+	hostname = strings.ToLower(hostname)
+
+	// Build availability key
+	if path != "" {
+		return fmt.Sprintf("%s:%d%s", hostname, port, path)
+	}
+	return fmt.Sprintf("%s:%d", hostname, port)
 }
 
 // getClient returns config and API client
