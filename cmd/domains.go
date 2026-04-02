@@ -6,9 +6,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"wzjk-cli/pkg/api"
 	"wzjk-cli/pkg/config"
+	"wzjk-cli/pkg/ssl"
 	"wzjk-cli/pkg/utils"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -48,6 +50,9 @@ var domainsAddCmd = &cobra.Command{
   # 指定端口和告警天数
   wzjk-cli domains add example.com --port 443 --alert-days 30
 
+  # 本地 SSL 检查（不经过服务端）
+  wzjk-cli domains add example.com --local
+
   # 跳过 SSL 检查
   wzjk-cli domains add example.com --skip-check`,
 	RunE: runDomainsAdd,
@@ -82,8 +87,11 @@ var domainsCheckCmd = &cobra.Command{
 	Use:   "check <domain>",
 	Short: "检查域名的 SSL 证书",
 	Args:  cobra.ExactArgs(1),
-	Example: `  # 检查域名 SSL 证书
+	Example: `  # 检查域名 SSL 证书（默认使用服务端检查）
   wzjk-cli domains check example.com
+
+  # 本地检查（不经过服务端）
+  wzjk-cli domains check example.com --local
 
   # 指定端口
   wzjk-cli domains check example.com --port 8443`,
@@ -107,6 +115,7 @@ func init() {
 	domainsAddCmd.Flags().Int("alert-days", 20, "告警提前天数")
 	domainsAddCmd.Flags().String("type", "http_tls", "检查类型: http_tls, https, tcp, tls")
 	domainsAddCmd.Flags().Bool("skip-check", false, "跳过 SSL 检查")
+	domainsAddCmd.Flags().Bool("local", false, "本地 SSL 检查（不经过服务端）")
 
 	// Delete flags
 	domainsDeleteCmd.Flags().Bool("force", false, "强制删除，不确认")
@@ -117,6 +126,7 @@ func init() {
 
 	// Check flags
 	domainsCheckCmd.Flags().Int("port", 443, "端口")
+	domainsCheckCmd.Flags().Bool("local", false, "本地检查（不经过服务端）")
 }
 
 func runDomainsList(cmd *cobra.Command, args []string) error {
@@ -241,6 +251,7 @@ func runDomainsAdd(cmd *cobra.Command, args []string) error {
 	alertDays, _ := cmd.Flags().GetInt("alert-days")
 	checkType, _ := cmd.Flags().GetString("type")
 	skipCheck, _ := cmd.Flags().GetBool("skip-check")
+	local, _ := cmd.Flags().GetBool("local")
 
 	_, client, err := getClient()
 	if err != nil {
@@ -250,9 +261,20 @@ func runDomainsAdd(cmd *cobra.Command, args []string) error {
 	// Check SSL if not skipped
 	if !skipCheck {
 		fmt.Println("正在检查 SSL 证书...")
-		sslInfo, err := client.CheckSSL(domain, port)
-		if err != nil {
-			fmt.Printf("SSL 检查警告: %v\n", err)
+		var sslInfo *api.SSLInfo
+		var checkErr error
+
+		if local {
+			// Local SSL check
+			checker := ssl.NewChecker(30 * time.Second)
+			sslInfo, checkErr = checker.CheckSSL(domain, port)
+		} else {
+			// Server-side SSL check
+			sslInfo, checkErr = client.CheckSSL(domain, port)
+		}
+
+		if checkErr != nil {
+			fmt.Printf("SSL 检查警告: %v\n", checkErr)
 		} else {
 			displaySSLInfo(sslInfo)
 		}
@@ -355,16 +377,30 @@ func runDomainsUpdate(cmd *cobra.Command, args []string) error {
 func runDomainsCheck(cmd *cobra.Command, args []string) error {
 	domain := args[0]
 	port, _ := cmd.Flags().GetInt("port")
-
-	_, client, err := getClient()
-	if err != nil {
-		return err
-	}
+	local, _ := cmd.Flags().GetBool("local")
 
 	fmt.Printf("正在检查 %s:%d ...\n", domain, port)
-	info, err := client.CheckSSL(domain, port)
-	if err != nil {
-		return fmt.Errorf("SSL 检查失败: %w", err)
+
+	var info *api.SSLInfo
+	var err error
+
+	if local {
+		// Local SSL check
+		checker := ssl.NewChecker(30 * time.Second)
+		info, err = checker.CheckSSL(domain, port)
+		if err != nil {
+			return fmt.Errorf("本地 SSL 检查失败: %w", err)
+		}
+	} else {
+		// Server-side SSL check
+		_, client, err := getClient()
+		if err != nil {
+			return err
+		}
+		info, err = client.CheckSSL(domain, port)
+		if err != nil {
+			return fmt.Errorf("SSL 检查失败: %w", err)
+		}
 	}
 
 	displaySSLInfo(info)
