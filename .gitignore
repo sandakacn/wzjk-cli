@@ -1,1 +1,38 @@
+# Binaries
+wzjk-cli
 bin/*
+
+# Build output
+dist/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories (if using vendor)
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.local
+
+# SSL certs (if generated locally)
+*.pem
+*.key
+*.crt
