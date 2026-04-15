@@ -66,23 +66,9 @@ type UserProfile struct {
 		Wechat bool `json:"wechat"`
 	} `json:"notificationSettings"`
 	AlertPreferences struct {
-		ExpiryAlert       bool `json:"expiryAlert"`
-		AvailabilityAlert bool `json:"availabilityAlert"`
+		ExpiryAlert bool `json:"expiryAlert"`
 	} `json:"alertPreferences"`
 }
-
-// AvailabilityStatus represents the availability status of a domain
-type AvailabilityStatus struct {
-	Domain         string            `json:"domain"`
-	Port           int               `json:"port"`
-	AvailabilityKey string           `json:"availabilityKey"`
-	Available      bool              `json:"available"`
-	Regions        map[string]bool   `json:"regions"`
-	LastChecked    *int64            `json:"lastChecked"`
-}
-
-// AvailabilityResponse represents the response from availability API
-type AvailabilityResponse map[string]AvailabilityStatus
 
 // APIResponse is a generic API response wrapper
 type APIResponse struct {

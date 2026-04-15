@@ -63,7 +63,6 @@ func runProfile(cmd *cobra.Command, args []string) error {
 	fmt.Println(color.CyanString("═══ 告警偏好 ═══"))
 	fmt.Println()
 	fmt.Printf("证书过期告警:     %s\n", utils.FormatBool(profile.AlertPreferences.ExpiryAlert))
-	fmt.Printf("可用性告警:       %s\n", utils.FormatBool(profile.AlertPreferences.AvailabilityAlert))
 	fmt.Println()
 
 	return nil

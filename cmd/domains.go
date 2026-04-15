@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"wzjk-cli/pkg/api"
@@ -154,20 +153,12 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 		return domains[i].SSLValidTo.Before(*domains[j].SSLValidTo)
 	})
 
-	// Get availability data
-	availability, _ := client.GetAvailability()
-
 	// Filter by alerts if requested
 	if alertsOnly {
 		var filtered []api.Domain
 		for _, d := range domains {
 			daysLeft := utils.DaysUntil(d.SSLValidTo)
 			if daysLeft <= d.AlertDays {
-				filtered = append(filtered, d)
-				continue
-			}
-			availKey := getAvailabilityKey(d.Domain, d.Port)
-			if avail, ok := availability[availKey]; ok && !avail.Available {
 				filtered = append(filtered, d)
 			}
 		}
@@ -189,7 +180,7 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 	fmt.Printf("API URL: %s\n\n", cfg.APIURL)
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "域名", "端口", "过期时间", "剩余", "可用性", "状态"})
+	table.SetHeader([]string{"ID", "域名", "端口", "过期时间", "剩余", "状态"})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -205,17 +196,6 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 	for _, d := range domains {
 		daysLeft := utils.DaysUntil(d.SSLValidTo)
 		daysStr := utils.FormatDaysLeft(daysLeft, d.AlertDays)
-
-		// Availability status
-		availStr := color.GreenString("未知")
-		availKey := getAvailabilityKey(d.Domain, d.Port)
-		if avail, ok := availability[availKey]; ok {
-			if avail.Available {
-				availStr = color.GreenString("✓")
-			} else {
-				availStr = color.RedString("✗")
-			}
-		}
 
 		// Status
 		statusStr := color.GreenString("正常")
@@ -234,7 +214,6 @@ func runDomainsList(cmd *cobra.Command, args []string) error {
 			strconv.Itoa(d.Port),
 			utils.FormatTime(d.SSLValidTo),
 			daysStr,
-			availStr,
 			statusStr,
 		})
 	}
@@ -434,56 +413,6 @@ func displaySSLInfo(info *api.SSLInfo) {
 		fmt.Println(color.RedString("✗ 证书无效"))
 	}
 	fmt.Println()
-}
-
-// getAvailabilityKey generates the availability key used by the server
-// Format: "hostname:port" or "hostname:port/path" (e.g., "example.com:443" or "example.com:443/health")
-// This must match the server's parseDomain() function in src/lib/domain-utils.ts
-func getAvailabilityKey(domain string, port int) string {
-	hostname := domain
-	path := ""
-
-	// Handle URL format (e.g., "https://example.com:443/path")
-	if strings.HasPrefix(domain, "http://") || strings.HasPrefix(domain, "https://") {
-		// Extract hostname and path from URL
-		// Remove scheme
-		withoutScheme := strings.TrimPrefix(domain, "https://")
-		withoutScheme = strings.TrimPrefix(withoutScheme, "http://")
-
-		// Split by / to separate host and path
-		parts := strings.SplitN(withoutScheme, "/", 2)
-		hostname = parts[0]
-		if len(parts) > 1 {
-			path = "/" + parts[1]
-		}
-
-		// Extract port from hostname if present
-		if strings.Contains(hostname, ":") {
-			hostParts := strings.Split(hostname, ":")
-			hostname = hostParts[0]
-			if parsedPort, err := strconv.Atoi(hostParts[1]); err == nil && parsedPort > 0 && parsedPort <= 65535 {
-				port = parsedPort
-			}
-		}
-	} else {
-		// Simple hostname, possibly with port (e.g., "example.com:443")
-		if strings.Contains(hostname, ":") {
-			hostParts := strings.Split(hostname, ":")
-			hostname = hostParts[0]
-			if parsedPort, err := strconv.Atoi(hostParts[1]); err == nil && parsedPort > 0 && parsedPort <= 65535 {
-				port = parsedPort
-			}
-		}
-	}
-
-	// Normalize hostname to lowercase
-	hostname = strings.ToLower(hostname)
-
-	// Build availability key
-	if path != "" {
-		return fmt.Sprintf("%s:%d%s", hostname, port, path)
-	}
-	return fmt.Sprintf("%s:%d", hostname, port)
 }
 
 // getClient returns config and API client

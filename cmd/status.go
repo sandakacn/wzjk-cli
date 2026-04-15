@@ -40,12 +40,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("获取域名列表失败: %w", err)
 	}
 
-	// Get availability
-	availability, _ := client.GetAvailability()
-
 	// Calculate stats
 	total := len(domains)
-	var expiringSoon, unavailable, inactive int
+	var expiringSoon, inactive int
 	for _, d := range domains {
 		daysLeft := utils.DaysUntil(d.SSLValidTo)
 		if daysLeft <= d.AlertDays {
@@ -53,9 +50,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		}
 		if !d.IsActive {
 			inactive++
-		}
-		if avail, ok := availability[d.Domain]; ok && !avail.Available {
-			unavailable++
 		}
 	}
 
@@ -84,11 +78,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Printf("  即将过期:    %d\n", expiringSoon)
 	}
-	if unavailable > 0 {
-		fmt.Printf("  不可用:      %s\n", color.RedString("%d", unavailable))
-	} else {
-		fmt.Printf("  不可用:      %d\n", unavailable)
-	}
 	if inactive > 0 {
 		fmt.Printf("  已暂停:      %s\n", color.YellowString("%d", inactive))
 	} else {
@@ -105,14 +94,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Alert preferences
 	fmt.Println(color.WhiteString("【告警设置】"))
 	fmt.Printf("  证书过期:    %s\n", utils.FormatBool(profile.AlertPreferences.ExpiryAlert))
-	fmt.Printf("  可用性告警:  %s\n", utils.FormatBool(profile.AlertPreferences.AvailabilityAlert))
 	fmt.Println()
 
 	// Summary
-	if expiringSoon > 0 || unavailable > 0 {
-		fmt.Println(color.YellowString("⚠ 有 %d 个问题需要关注", expiringSoon+unavailable))
+	if expiringSoon > 0 {
+		fmt.Println(color.YellowString("⚠ 有 %d 个证书即将过期", expiringSoon))
 	} else {
-		fmt.Println(color.GreenString("✓ 所有域名状态正常"))
+		fmt.Println(color.GreenString("✓ 所有域名证书状态正常"))
 	}
 
 	return nil

@@ -147,18 +147,6 @@ func (c *Client) GetProfile() (*UserProfile, error) {
 	return &resp.Data, nil
 }
 
-// GetAvailability returns availability status for all domains
-func (c *Client) GetAvailability() (AvailabilityResponse, error) {
-	var resp struct {
-		Success      bool                     `json:"success"`
-		Availability AvailabilityResponse     `json:"availability"`
-	}
-	if err := c.doRequest("GET", "/api/availability", nil, &resp); err != nil {
-		return nil, err
-	}
-	return resp.Availability, nil
-}
-
 // LoginResponse represents the response from API key login
 type LoginResponse struct {
 	Token string `json:"token"`
